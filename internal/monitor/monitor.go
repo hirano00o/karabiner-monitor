@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -24,17 +25,25 @@ type ProcessInfo struct {
 }
 
 // FindProcess finds a process by name and returns its information.
-// If multiple processes with the same name exist, it returns the first one found.
+// It searches in two ways:
+//  1. Exact match with process name (e.g., "karabiner_grabber")
+//  2. Partial match in command line arguments (e.g., "/Library/.../karabiner_grabber")
+//
+// If multiple processes match, it returns the first one found.
 // Returns an error if the process is not found or if there's an error accessing process information.
 //
 // Example:
 //
+//	// Find by exact process name
 //	proc, err := FindProcess("karabiner_grabber")
 //	if err != nil {
 //		log.Printf("process not found: %v", err)
 //		return
 //	}
 //	fmt.Printf("Found process: PID=%d, Name=%s\n", proc.PID, proc.Name)
+//
+//	// Find by path substring (useful when process runs with full path)
+//	proc2, err := FindProcess("Karabiner-Elements/bin/karabiner_grabber")
 func FindProcess(name string) (*ProcessInfo, error) {
 	processes, err := process.Processes()
 	if err != nil {
@@ -48,7 +57,26 @@ func FindProcess(name string) (*ProcessInfo, error) {
 			continue
 		}
 
+		// Try exact name match first
 		if procName == name {
+			return &ProcessInfo{
+				PID:  p.Pid,
+				Name: procName,
+			}, nil
+		}
+	}
+
+	// If exact name match failed, try command line substring match
+	for _, p := range processes {
+		cmdline, err := p.Cmdline()
+		if err != nil {
+			// Skip processes we can't access
+			continue
+		}
+
+		// Check if the search string appears in the command line
+		if len(cmdline) > 0 && strings.Contains(cmdline, name) {
+			procName, _ := p.Name()
 			return &ProcessInfo{
 				PID:  p.Pid,
 				Name: procName,
