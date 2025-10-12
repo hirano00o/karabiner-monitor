@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Karabiner Monitor Installation Script
-# This script installs the karabiner-monitor service as a LaunchAgent
+# This script installs the karabiner-monitor service as a LaunchDaemon (runs as root)
 
 set -e
 
@@ -20,17 +20,17 @@ sudo cp ./karabiner-monitor /usr/local/bin/karabiner-monitor
 sudo chmod +x /usr/local/bin/karabiner-monitor
 echo "✓ Binary installed"
 
-# Create config directory
-CONFIG_DIR="$HOME/.config/karabiner-monitor"
+# Create config directory (owned by root since daemon runs as root)
+CONFIG_DIR="/Library/Application Support/karabiner-monitor"
 echo "Creating config directory: $CONFIG_DIR"
-mkdir -p "$CONFIG_DIR"
+sudo mkdir -p "$CONFIG_DIR"
 echo "✓ Config directory created"
 
 # Create default config if it doesn't exist
 CONFIG_FILE="$CONFIG_DIR/config.json"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Creating default configuration..."
-    cat > "$CONFIG_FILE" << 'EOF'
+    sudo tee "$CONFIG_FILE" > /dev/null << 'EOF'
 {
   "process_name": "karabiner_grabber",
   "memory_threshold_mb": 50,
@@ -46,29 +46,31 @@ else
 fi
 
 # Create log directory
-LOG_DIR="$HOME/Library/Logs/karabiner-monitor"
+LOG_DIR="/var/log/karabiner-monitor"
 echo "Creating log directory: $LOG_DIR"
-mkdir -p "$LOG_DIR"
+sudo mkdir -p "$LOG_DIR"
 echo "✓ Log directory created"
 
-# Install LaunchAgent
-PLIST_SRC="./configs/com.karabiner.monitor.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.karabiner.monitor.plist"
+# Install LaunchDaemon
+PLIST_SRC="./configs/com.karabiner.monitor.daemon.plist"
+PLIST_DEST="/Library/LaunchDaemons/com.karabiner.monitor.plist"
 
 if [ ! -f "$PLIST_SRC" ]; then
-    echo "Error: LaunchAgent plist not found at $PLIST_SRC"
+    echo "Error: LaunchDaemon plist not found at $PLIST_SRC"
     exit 1
 fi
 
-echo "Installing LaunchAgent..."
-cp "$PLIST_SRC" "$PLIST_DEST"
-echo "✓ LaunchAgent plist installed"
+echo "Installing LaunchDaemon..."
+sudo cp "$PLIST_SRC" "$PLIST_DEST"
+sudo chown root:wheel "$PLIST_DEST"
+sudo chmod 644 "$PLIST_DEST"
+echo "✓ LaunchDaemon plist installed"
 
-# Load LaunchAgent
-echo "Loading LaunchAgent..."
-launchctl unload "$PLIST_DEST" 2>/dev/null || true
-launchctl load "$PLIST_DEST"
-echo "✓ LaunchAgent loaded"
+# Load LaunchDaemon
+echo "Loading LaunchDaemon..."
+sudo launchctl unload "$PLIST_DEST" 2>/dev/null || true
+sudo launchctl load "$PLIST_DEST"
+echo "✓ LaunchDaemon loaded"
 
 echo ""
 echo "==== Installation Complete ===="
@@ -79,12 +81,16 @@ echo "Please grant accessibility permission to karabiner-monitor:"
 echo "1. Open System Preferences > Security & Privacy > Privacy"
 echo "2. Select 'Accessibility' from the left sidebar"
 echo "3. Click the lock to make changes"
-echo "4. Add '/usr/local/bin/karabiner-monitor' or your Terminal app"
+echo "4. Add '/usr/local/bin/karabiner-monitor'"
 echo "5. Check the box to enable it"
 echo ""
-echo "Configuration file: $CONFIG_FILE"
-echo "Log file: $LOG_DIR/monitor.log"
+echo "Note: This service runs as root (LaunchDaemon) to access karabiner_grabber process."
 echo ""
-echo "To check status: launchctl list | grep karabiner.monitor"
-echo "To view logs: tail -f $LOG_DIR/monitor.log"
+echo "Configuration file: $CONFIG_FILE"
+echo "Log directory: $LOG_DIR"
+echo "Standard output: /var/log/karabiner-monitor.stdout"
+echo "Standard error: /var/log/karabiner-monitor.stderr"
+echo ""
+echo "To check status: sudo launchctl list | grep karabiner.monitor"
+echo "To view logs: sudo tail -f $LOG_DIR/monitor.log"
 echo ""

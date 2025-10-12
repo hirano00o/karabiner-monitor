@@ -13,7 +13,7 @@ Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープな�
 - **キー入力検知**: プロセスをkillする前に、指定秒数間キー入力がないことを確認
 - **macOS通知**: プロセス再起動時に通知センターで通知
 - **ログローテーション**: 設定可能なサイズと保持日数でログを自動ローテーション
-- **LaunchAgent**: システム起動時に自動起動
+- **LaunchDaemon**: システム起動時に自動起動（rootプロセス監視のためroot権限で実行）
 
 ## 必要要件
 
@@ -40,8 +40,8 @@ make install
 このコマンドは以下を実行します:
 - バイナリのビルド
 - `/usr/local/bin`へのインストール
-- 設定ファイルの生成（`~/.config/karabiner-monitor/config.json`）
-- LaunchAgentの登録と起動
+- 設定ファイルの生成（`/Library/Application Support/karabiner-monitor/config.json`）
+- LaunchDaemon の登録と起動（root権限で実行）
 
 ### 3. アクセシビリティ権限の設定
 
@@ -50,12 +50,15 @@ make install
 1. システム環境設定 > セキュリティとプライバシー > プライバシー を開く
 2. 左側のリストから「アクセシビリティ」を選択
 3. 鍵アイコンをクリックして変更を許可
-4. `/usr/local/bin/karabiner-monitor` またはターミナルアプリを追加
+4. `/usr/local/bin/karabiner-monitor` を追加
 5. チェックボックスを有効化
+6. サービスを再起動: `sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist && sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist`
+
+**注意**: このサービスはLaunchDaemonとしてroot権限で実行されます。これは`karabiner_grabber`がrootプロセスとして動作しているためです。
 
 ## 設定
 
-設定ファイル: `~/.config/karabiner-monitor/config.json`
+設定ファイル: `/Library/Application Support/karabiner-monitor/config.json`
 
 ```json
 {
@@ -82,31 +85,39 @@ make install
 ### サービスの状態確認
 
 ```bash
-launchctl list | grep karabiner.monitor
+sudo launchctl list | grep karabiner.monitor
 ```
 
 ### ログの確認
 
 ```bash
-tail -f ~/Library/Logs/karabiner-monitor/monitor.log
+# アプリケーションログ
+sudo tail -f /var/log/karabiner-monitor/monitor.log
+
+# 標準出力
+sudo tail -f /var/log/karabiner-monitor.stdout
+
+# 標準エラー出力
+sudo tail -f /var/log/karabiner-monitor.stderr
 ```
 
 ### サービスの停止
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.karabiner.monitor.plist
+sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
 ```
 
 ### サービスの開始
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.karabiner.monitor.plist
+sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
 ```
 
 ### ローカル実行（デバッグ用）
 
 ```bash
-make run
+# rootで実行する必要があります
+sudo /usr/local/bin/karabiner-monitor
 ```
 
 ## アンインストール
@@ -118,8 +129,10 @@ make uninstall
 設定ファイルとログを完全に削除する場合:
 
 ```bash
-rm -rf ~/.config/karabiner-monitor
-rm -rf ~/Library/Logs/karabiner-monitor
+sudo rm -rf "/Library/Application Support/karabiner-monitor"
+sudo rm -rf /var/log/karabiner-monitor
+sudo rm -f /var/log/karabiner-monitor.stdout
+sudo rm -f /var/log/karabiner-monitor.stderr
 ```
 
 ## 開発
@@ -194,9 +207,20 @@ MIT License
 
 ログに「accessibility permission not granted」と表示される場合は、上記のアクセシビリティ権限の設定を確認してください。
 
-### プロセスが見つからない
+### プロセスが見つからない（process not found）
 
-`karabiner_grabber`が実行されていない場合、ログに「process not found」と表示されますが、これは正常な動作です。プロセスが起動すると自動的に監視が開始されます。
+以下の原因が考えられます:
+
+1. **karabiner_grabberが実行されていない**: プロセスが起動すると自動的に監視が開始されます
+2. **LaunchDaemonが正しく起動していない**: サービスの状態を確認してください
+   ```bash
+   sudo launchctl list | grep karabiner.monitor
+   ```
+3. **アクセシビリティ権限がない**: アクセシビリティ権限を設定後、サービスを再起動してください
+   ```bash
+   sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
+   sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
+   ```
 
 ### 通知が表示されない
 

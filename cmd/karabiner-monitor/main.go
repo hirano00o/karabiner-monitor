@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -18,13 +17,8 @@ import (
 
 func main() {
 	// Load configuration
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to get home directory: %v\n", err)
-		os.Exit(1)
-	}
-
-	configPath := filepath.Join(homeDir, ".config", "karabiner-monitor", "config.json")
+	// LaunchDaemon runs as root, so use system-wide config path
+	configPath := "/Library/Application Support/karabiner-monitor/config.json"
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
@@ -32,7 +26,7 @@ func main() {
 	}
 
 	// Initialize logger
-	logPath := filepath.Join(homeDir, "Library", "Logs", "karabiner-monitor", "monitor.log")
+	logPath := "/var/log/karabiner-monitor/monitor.log"
 	log := logger.New(logPath, cfg)
 
 	log.Info("karabiner-monitor starting", "config", configPath)
