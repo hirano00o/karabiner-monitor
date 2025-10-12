@@ -101,11 +101,11 @@ func checkAndKillIfNeeded(ctx context.Context, cfg *config.Config, log *logger.L
 	proc, err := monitor.FindProcess(cfg.ProcessName)
 	if err != nil {
 		// Process not found, nothing to do
-		log.Debug("process not found", "process", cfg.ProcessName)
+		log.Info("process not found", "process", cfg.ProcessName, "error", err)
 		return nil
 	}
 
-	log.Debug("process found", "pid", proc.PID, "name", proc.Name)
+	log.Info("process found", "pid", proc.PID, "name", proc.Name)
 
 	// Get memory usage
 	memoryMB, err := monitor.GetMemoryUsage(proc.PID)
@@ -113,7 +113,7 @@ func checkAndKillIfNeeded(ctx context.Context, cfg *config.Config, log *logger.L
 		return fmt.Errorf("failed to get memory usage: %w", err)
 	}
 
-	log.Debug("memory usage", "pid", proc.PID, "memory_mb", memoryMB, "threshold_mb", cfg.MemoryThresholdMB)
+	log.Info("memory usage", "pid", proc.PID, "memory_mb", memoryMB, "threshold_mb", cfg.MemoryThresholdMB)
 
 	// Check if memory exceeds threshold
 	if memoryMB < float64(cfg.MemoryThresholdMB) {
