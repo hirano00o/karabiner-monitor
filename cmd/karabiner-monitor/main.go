@@ -31,15 +31,18 @@ func main() {
 
 	log.Info("karabiner-monitor starting", "config", configPath)
 
-	// Check accessibility permission
-	if !keyboard.CheckAccessibilityPermission() {
-		log.Error("accessibility permission not granted")
-		fmt.Fprintln(os.Stderr, "ERROR: Accessibility permission required.")
-		fmt.Fprintln(os.Stderr, "Please grant permission in: System Preferences > Security & Privacy > Privacy > Accessibility")
-		os.Exit(1)
+	// Check accessibility permission (skip for root)
+	if os.Getuid() != 0 {
+		if !keyboard.CheckAccessibilityPermission() {
+			log.Error("accessibility permission not granted")
+			fmt.Fprintln(os.Stderr, "ERROR: Accessibility permission required.")
+			fmt.Fprintln(os.Stderr, "Please grant permission in: System Preferences > Security & Privacy > Privacy > Accessibility")
+			os.Exit(1)
+		}
+		log.Info("accessibility permission granted")
+	} else {
+		log.Info("running as root, skipping accessibility permission check")
 	}
-
-	log.Info("accessibility permission granted")
 
 	// Setup signal handling for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

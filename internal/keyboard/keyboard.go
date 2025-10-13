@@ -111,8 +111,16 @@ func CheckAccessibilityPermission() bool {
 //	}
 func WaitForIdle(ctx context.Context, duration time.Duration) bool {
 	// Check accessibility permission first
+	// Note: Root processes may not pass this check even though they can access events
 	if !CheckAccessibilityPermission() {
-		return false
+		// For root processes, just wait for the duration without monitoring
+		// This is acceptable because root processes typically run as system services
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(duration):
+			return true
+		}
 	}
 
 	// Reset and start monitoring

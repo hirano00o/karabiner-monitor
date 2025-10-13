@@ -10,17 +10,19 @@ Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープな�
 
 - **メモリ監視**: 設定可能な間隔で`karabiner_grabber`プロセスのメモリ使用量をチェック
 - **自動再起動**: メモリ閾値を超えた場合に自動的にプロセスをkill（Karabinerが自動的に再起動）
-- **キー入力検知**: プロセスをkillする前に、指定秒数間キー入力がないことを確認
+- **待機時間**: プロセスをkillする前に、設定された秒数だけ待機（デフォルト10秒）
 - **macOS通知**: プロセス再起動時に通知センターで通知
 - **ログローテーション**: 設定可能なサイズと保持日数でログを自動ローテーション
 - **LaunchDaemon**: システム起動時に自動起動（rootプロセス監視のためroot権限で実行）
+- **プロセス検索**: プロセス名とコマンドライン引数の両方で検索可能
 
 ## 必要要件
 
 - macOS 12以降
 - Go 1.21以降（ビルド時）
 - Karabiner-Elements
-- アクセシビリティ権限
+
+**注意**: このツールはroot権限で実行されるため、アクセシビリティ権限は不要です。
 
 ## インストール
 
@@ -43,18 +45,31 @@ make install
 - 設定ファイルの生成（`/Library/Application Support/karabiner-monitor/config.json`）
 - LaunchDaemon の登録と起動（root権限で実行）
 
-### 3. アクセシビリティ権限の設定
+### 3. 動作確認
 
-**重要**: キー入力監視にはアクセシビリティ権限が必要です。
+インストールが完了すると、LaunchDaemonとしてサービスが起動します。
 
-1. システム環境設定 > セキュリティとプライバシー > プライバシー を開く
-2. 左側のリストから「アクセシビリティ」を選択
-3. 鍵アイコンをクリックして変更を許可
-4. `/usr/local/bin/karabiner-monitor` を追加
-5. チェックボックスを有効化
-6. サービスを再起動: `sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist && sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist`
+**重要な仕様**:
+- このサービスはLaunchDaemonとしてroot権限で実行されます
+- `karabiner_grabber`がrootプロセスとして動作しているため、root権限が必要です
+- rootプロセスとして実行されるため、アクセシビリティ権限の設定は不要です
+- キーボードアイドル検知は、root環境では実際の監視を行わず、設定された秒数（デフォルト10秒）だけ待機します
 
-**注意**: このサービスはLaunchDaemonとしてroot権限で実行されます。これは`karabiner_grabber`がrootプロセスとして動作しているためです。
+ログでサービスの動作を確認できます:
+
+```bash
+sudo tail -f /var/log/karabiner-monitor/monitor.log
+```
+
+正常に動作している場合、以下のようなログが表示されます:
+
+```
+{"level":"INFO","msg":"karabiner-monitor starting","config":"/Library/Application Support/karabiner-monitor/config.json"}
+{"level":"INFO","msg":"running as root, skipping accessibility permission check"}
+{"level":"INFO","msg":"starting monitoring loop","process":"karabiner_grabber","threshold_mb":50}
+{"level":"INFO","msg":"process found","pid":99849,"name":"karabiner_grabber"}
+{"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":97.1,"threshold_mb":50}
+```
 
 ## 設定
 
@@ -76,7 +91,8 @@ make install
 - **process_name**: 監視するプロセス名（デフォルト: `karabiner_grabber`）
 - **memory_threshold_mb**: メモリ使用量の閾値（MB）（デフォルト: 50）
 - **check_interval_seconds**: メモリチェック間隔（秒）（デフォルト: 60）
-- **idle_wait_seconds**: killする前のキー入力待機時間（秒）（デフォルト: 10）
+- **idle_wait_seconds**: killする前の待機時間（秒）（デフォルト: 10）
+  - 注: rootプロセスとして実行されるため、実際のキーボード監視は行わず、この秒数だけ待機します
 - **log_max_size_mb**: ログファイルの最大サイズ（MB）（デフォルト: 10）
 - **log_max_age_days**: ログファイルの保持日数（デフォルト: 7）
 
@@ -190,8 +206,32 @@ karabiner-monitor/
 1. **Config**: JSON設定ファイルの読み込みと検証
 2. **Logger**: lumberjackを使用したログローテーション
 3. **Monitor**: gopsutil/v4を使用したプロセス監視
-4. **Keyboard**: CGEventTap APIを使用したキー入力監視
+   - プロセス名での完全一致検索
+   - コマンドライン引数での部分一致検索
+4. **Keyboard**: 待機時間の管理
+   - rootプロセスではアクセシビリティAPIを使用せず、単純な時間待機
 5. **Notifier**: osascriptを使用したmacOS通知
+
+### 技術的な実装詳細
+
+#### rootプロセスとしての実行
+
+`karabiner_grabber`はrootプロセスとして実行されており、通常のユーザープロセスからはアクセスできません。gopsutilライブラリでrootプロセスの情報を取得しようとすると"invalid argument"エラーが発生します。
+
+この問題を解決するため、karabiner-monitorはLaunchDaemonとしてroot権限で実行されます:
+
+1. **プロセス監視**: rootとして実行されるため、rootプロセス(karabiner_grabber)の情報を取得可能
+2. **アクセシビリティ権限**: rootプロセスはアクセシビリティ権限チェックをスキップ
+3. **待機時間**: キーボード監視の代わりに、設定された秒数だけ待機してからkill実行
+
+#### プロセス検索
+
+FindProcess関数は2段階で検索を行います:
+
+1. **完全一致検索**: プロセス名が完全に一致するかチェック
+2. **コマンドライン検索**: コマンドライン引数に指定文字列が含まれるかチェック
+
+これにより、`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`のようなフルパスで実行されているプロセスも検出できます。
 
 ## ライセンス
 
@@ -203,28 +243,56 @@ MIT License
 
 ## トラブルシューティング
 
-### アクセシビリティ権限がない
-
-ログに「accessibility permission not granted」と表示される場合は、上記のアクセシビリティ権限の設定を確認してください。
-
 ### プロセスが見つからない（process not found）
 
 以下の原因が考えられます:
 
 1. **karabiner_grabberが実行されていない**: プロセスが起動すると自動的に監視が開始されます
+   ```bash
+   ps aux | grep karabiner_grabber | grep -v grep
+   ```
+
 2. **LaunchDaemonが正しく起動していない**: サービスの状態を確認してください
    ```bash
    sudo launchctl list | grep karabiner.monitor
    ```
-3. **アクセシビリティ権限がない**: アクセシビリティ権限を設定後、サービスを再起動してください
+
+3. **サービスが起動に失敗している**: エラーログを確認してください
+   ```bash
+   sudo tail -50 /var/log/karabiner-monitor.stderr
+   ```
+
+### サービスが頻繁に再起動している
+
+`/var/log/karabiner-monitor.stderr`に繰り返しエラーが記録されている場合:
+
+1. ログを確認してエラー内容を特定
+2. 設定ファイルが正しいか確認: `/Library/Application Support/karabiner-monitor/config.json`
+3. サービスを停止して問題を解決してから再起動:
    ```bash
    sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
+   # 問題を修正
    sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
+   ```
+
+### メモリ閾値を超えてもkillされない
+
+1. ログでメモリ使用量を確認:
+   ```bash
+   sudo tail -f /var/log/karabiner-monitor/monitor.log
+   ```
+
+2. `idle_wait_seconds`の待機時間後にkillされます（デフォルト10秒）
+
+3. killに成功すると以下のようなログが表示されます:
+   ```
+   {"level":"INFO","msg":"killing process","pid":99849,"memory_mb":97.1}
+   {"level":"INFO","msg":"process killed successfully","pid":99849}
    ```
 
 ### 通知が表示されない
 
-macOSの通知設定で、ターミナルまたは`karabiner-monitor`の通知が許可されているか確認してください。
+macOSの通知設定で、通知が許可されているか確認してください。LaunchDaemonからの通知は制限される場合があります。
 
 ## 参考
 
