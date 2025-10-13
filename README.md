@@ -11,18 +11,18 @@ Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープな�
 - **メモリ監視**: 設定可能な間隔で`karabiner_grabber`プロセスのメモリ使用量をチェック
 - **自動再起動**: メモリ閾値を超えた場合に自動的にプロセスをkill（Karabinerが自動的に再起動）
 - **待機時間**: プロセスをkillする前に、設定された秒数だけ待機（デフォルト10秒）
+- **macOS通知**: terminal-notifierを使用した通知（推奨）、osascriptへのフォールバック対応
 - **詳細なログ**: すべての監視・再起動アクションを記録
 - **ログローテーション**: 設定可能なサイズと保持日数でログを自動ローテーション
 - **LaunchDaemon**: システム起動時に自動起動（rootプロセス監視のためroot権限で実行）
 - **プロセス検索**: プロセス名とコマンドライン引数の両方で検索可能
-
-**注意**: LaunchDaemonとして実行されるため、macOS通知センターへの通知は表示されません。ログファイルで動作を確認してください。
 
 ## 必要要件
 
 - macOS 12以降
 - Go 1.21以降（ビルド時）
 - Karabiner-Elements
+- terminal-notifier（通知機能を使用する場合、推奨）
 
 **注意**: このツールはroot権限で実行されるため、アクセシビリティ権限は不要です。
 
@@ -35,7 +35,17 @@ git clone https://github.com/hirano00o/karabiner-monitor.git
 cd karabiner-monitor
 ```
 
-### 2. ビルドとインストール
+### 2. terminal-notifierのインストール（オプション、推奨）
+
+通知機能を使用する場合は、terminal-notifierをインストールしてください:
+
+```bash
+brew install terminal-notifier
+```
+
+terminal-notifierはLaunchDaemonからの通知に対応しており、rootプロセスからでもユーザーに通知を送ることができます。
+
+### 3. ビルドとインストール
 
 ```bash
 make install
@@ -47,7 +57,7 @@ make install
 - 設定ファイルの生成（`/Library/Application Support/karabiner-monitor/config.json`）
 - LaunchDaemon の登録と起動（root権限で実行）
 
-### 3. 動作確認
+### 4. 動作確認
 
 インストールが完了すると、LaunchDaemonとしてサービスが起動します。
 
@@ -56,6 +66,7 @@ make install
 - `karabiner_grabber`がrootプロセスとして動作しているため、root権限が必要です
 - rootプロセスとして実行されるため、アクセシビリティ権限の設定は不要です
 - キーボードアイドル検知は、root環境では実際の監視を行わず、設定された秒数（デフォルト10秒）だけ待機します
+- 通知機能は`terminal-notifier`を使用（インストールされている場合）、フォールバックとして`osascript`を使用
 
 ログでサービスの動作を確認できます:
 
@@ -212,7 +223,7 @@ karabiner-monitor/
    - コマンドライン引数での部分一致検索
 4. **Keyboard**: 待機時間の管理
    - rootプロセスではアクセシビリティAPIを使用せず、単純な時間待機
-5. **Notifier**: osascriptを使用したmacOS通知
+5. **Notifier**: terminal-notifierを使用したmacOS通知（osascriptへのフォールバック対応）
 
 ### 技術的な実装詳細
 
@@ -234,6 +245,16 @@ FindProcess関数は2段階で検索を行います:
 2. **コマンドライン検索**: コマンドライン引数に指定文字列が含まれるかチェック
 
 これにより、`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`のようなフルパスで実行されているプロセスも検出できます。
+
+#### 通知システム
+
+LaunchDaemonから通知を送信するには特別な対応が必要です:
+
+1. **terminal-notifier優先**: LaunchDaemonからでも動作する`terminal-notifier`を最初に試行
+2. **osascriptへのフォールバック**: `terminal-notifier`が利用できない場合は`osascript`を使用
+3. **エラーハンドリング**: 両方が失敗した場合のみエラーを返す
+
+`terminal-notifier`は`brew install terminal-notifier`でインストール可能で、LaunchDaemonからの通知に最適です。
 
 ## ライセンス
 
@@ -294,16 +315,32 @@ MIT License
 
 ### 通知が表示されない
 
-**重要**: LaunchDaemonとして実行されるため、rootプロセスからの通知はmacOSによって制限されます。
+**推奨**: terminal-notifierをインストールすることで、LaunchDaemonからでも通知が表示されます。
 
-通知は正常に動作しない可能性が高いため、プロセスの再起動を確認するには以下の方法を使用してください:
+```bash
+brew install terminal-notifier
+```
 
-1. **ログファイルで確認**（推奨）:
+terminal-notifierがインストールされていない場合、osascriptにフォールバックしますが、rootプロセスからの通知は制限される場合があります。
+
+**通知が表示されない場合の確認方法**:
+
+1. **terminal-notifierがインストールされているか確認**:
+   ```bash
+   which terminal-notifier
+   ```
+
+2. **ログで通知送信のエラーを確認**:
+   ```bash
+   sudo tail -50 /var/log/karabiner-monitor.stderr | grep notification
+   ```
+
+3. **ログファイルで再起動を確認**（通知の代替）:
    ```bash
    sudo tail -f /var/log/karabiner-monitor/monitor.log | grep "killed"
    ```
 
-2. **karabiner_grabberのPID変化を確認**:
+4. **karabiner_grabberのPID変化を確認**:
    ```bash
    # 再起動前のPIDを記録
    ps aux | grep karabiner_grabber | grep -v grep
@@ -312,13 +349,11 @@ MIT License
    # PIDが変わっていれば再起動された
    ```
 
-3. **プロセスのアップタイム確認**:
-   ```bash
-   ps -eo pid,etime,comm | grep karabiner_grabber
-   ```
-   etimeが短い場合、最近再起動されたことを示します。
-
-**通知機能について**: rootプロセスとして実行されるLaunchDaemonの制約により、macOS通知センターへの通知は表示されません。ログ監視による確認を推奨します。
+**注意**: terminal-notifierをインストール後は、サービスの再起動が必要です:
+```bash
+sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
+sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
+```
 
 ## 参考
 
