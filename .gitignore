@@ -15,6 +15,7 @@
 /bin/
 /dist/
 karabiner-monitor
+memory-debug
 
 # Go workspace file
 go.work

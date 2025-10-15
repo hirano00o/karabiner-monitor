@@ -218,9 +218,11 @@ karabiner-monitor/
 
 1. **Config**: JSON設定ファイルの読み込みと検証
 2. **Logger**: lumberjackを使用したログローテーション
-3. **Monitor**: gopsutil/v4を使用したプロセス監視
+3. **Monitor**: gopsutil/v4を使用したプロセス監視とmacOS固有のメモリ計測
    - プロセス名での完全一致検索
    - コマンドライン引数での部分一致検索
+   - macOS: `phys_footprint`による正確なメモリ計測（`top`コマンドのMEM列と同じ）
+   - その他のOS: RSS（Resident Set Size）を使用
 4. **Keyboard**: 待機時間の管理
    - rootプロセスではアクセシビリティAPIを使用せず、単純な時間待機
 5. **Notifier**: terminal-notifierを使用したmacOS通知（osascriptへのフォールバック対応）
@@ -255,6 +257,41 @@ LaunchDaemonから通知を送信するには特別な対応が必要です:
 3. **エラーハンドリング**: 両方が失敗した場合のみエラーを返す
 
 `terminal-notifier`は`brew install terminal-notifier`でインストール可能で、LaunchDaemonからの通知に最適です。
+
+#### メモリ計測
+
+macOSとその他のOSで異なるメモリ計測方法を使用します:
+
+##### macOS (darwin)
+
+macOSでは`phys_footprint`を使用してメモリ使用量を計測します。これは`top`コマンドのMEM列に表示される値と同じで、プロセスが実際に使用しているメモリの正確な表現です。
+
+**phys_footprintとは**:
+- macOSカーネルが計算するプロセスの物理メモリフットプリント
+- RSS（Resident Set Size）よりも正確な実メモリ使用量
+- カーネルの計算式: `(internal - alternate_accounting) + (internal_compressed - alternate_accounting_compressed) + iokit_mapped + purgeable_nonvolatile + purgeable_nonvolatile_compressed + page_table`
+
+**実装方法**:
+- `vmmap --summary <pid>`コマンドを使用してPhysical footprintを取得
+- rootプロセスとして実行される場合は`vmmap`を直接実行
+- 非rootの場合は`sudo -n vmmap`を使用（sudoersでNOPASSWD設定が必要）
+- 正規表現でvmmap出力を解析: `Physical footprint:\s+([0-9.]+)([KMGT])?`
+- K/M/G/T単位を自動的にMBに変換
+
+**RSSとの比較**:
+- RSS: 物理メモリに常駐しているページのサイズ（共有メモリを含む）
+- phys_footprint: プロセスが実際に使用している物理メモリ（共有メモリの正確な割り当てを考慮）
+- 例: `karabiner_grabber`の場合、RSSは約13MBだが、phys_footprintは約797MB
+
+**制限事項**:
+- `vmmap`コマンドの実行には約2秒かかる場合があります
+- rootプロセスに対しては、実行側もroot権限が必要です
+
+##### その他のOS (Linux, Windows)
+
+非macOSプラットフォームでは、gopsutilライブラリを使用してRSS（Resident Set Size）を取得します:
+- RSS: プロセスが物理メモリに保持しているメモリのサイズ
+- バイトからメガバイトに変換して返します
 
 ## ライセンス
 

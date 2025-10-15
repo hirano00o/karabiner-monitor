@@ -88,8 +88,13 @@ func FindProcess(name string) (*ProcessInfo, error) {
 }
 
 // GetMemoryUsage returns the memory usage of a process in megabytes.
-// It retrieves the Resident Set Size (RSS) which represents the portion of memory
-// occupied by the process that is held in main memory (RAM).
+//
+// On macOS (darwin), this function uses the phys_footprint metric from task_info,
+// which corresponds to the MEM column in the top command. This provides a more
+// accurate representation of a process's memory impact on macOS.
+//
+// On other platforms, this retrieves the Resident Set Size (RSS) which represents
+// the portion of memory occupied by the process that is held in main memory (RAM).
 //
 // Returns an error if the process doesn't exist or memory information is unavailable.
 //
@@ -101,20 +106,9 @@ func FindProcess(name string) (*ProcessInfo, error) {
 //	}
 //	fmt.Printf("Process is using %.2f MB\n", memoryMB)
 func GetMemoryUsage(pid int32) (float64, error) {
-	p, err := process.NewProcess(pid)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get process: %w", err)
-	}
-
-	memInfo, err := p.MemoryInfo()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get memory info: %w", err)
-	}
-
-	// Convert RSS from bytes to megabytes
-	memoryMB := float64(memInfo.RSS) / 1024 / 1024
-
-	return memoryMB, nil
+	// On macOS, use the darwin-specific implementation
+	// which retrieves phys_footprint via task_info API
+	return GetMemoryUsageDarwin(pid)
 }
 
 // KillProcess terminates a process by its PID.
