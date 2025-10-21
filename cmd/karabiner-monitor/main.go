@@ -30,19 +30,7 @@ func main() {
 	log := logger.New(logPath, cfg)
 
 	log.Info("karabiner-monitor starting", "config", configPath)
-
-	// Check accessibility permission (skip for root)
-	if os.Getuid() != 0 {
-		if !keyboard.CheckAccessibilityPermission() {
-			log.Error("accessibility permission not granted")
-			fmt.Fprintln(os.Stderr, "ERROR: Accessibility permission required.")
-			fmt.Fprintln(os.Stderr, "Please grant permission in: System Preferences > Security & Privacy > Privacy > Accessibility")
-			os.Exit(1)
-		}
-		log.Info("accessibility permission granted")
-	} else {
-		log.Info("running as root, skipping accessibility permission check")
-	}
+	log.Info("running as LaunchDaemon with root privileges")
 
 	// Setup signal handling for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,8 +77,8 @@ func main() {
 //  2. Check if it exists (skip if not found)
 //  3. Get memory usage
 //  4. If memory usage exceeds threshold:
-//     a. Wait for keyboard idle period
-//     b. Kill the process if still idle
+//     a. Wait for the configured duration
+//     b. Kill the process
 //     c. Send notification
 //     d. Log the action
 func checkAndKillIfNeeded(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
@@ -122,15 +110,15 @@ func checkAndKillIfNeeded(ctx context.Context, cfg *config.Config, log *logger.L
 		"memory_mb", memoryMB,
 		"threshold_mb", cfg.MemoryThresholdMB)
 
-	// Wait for keyboard idle
-	idleCtx, idleCancel := context.WithTimeout(ctx, time.Duration(cfg.IdleWaitSeconds+5)*time.Second)
-	defer idleCancel()
+	// Wait for the configured duration before killing
+	waitCtx, waitCancel := context.WithTimeout(ctx, time.Duration(cfg.IdleWaitSeconds+5)*time.Second)
+	defer waitCancel()
 
-	log.Info("waiting for keyboard idle", "duration_seconds", cfg.IdleWaitSeconds)
-	wasIdle := keyboard.WaitForIdle(idleCtx, time.Duration(cfg.IdleWaitSeconds)*time.Second)
+	log.Info("waiting before kill", "duration_seconds", cfg.IdleWaitSeconds)
+	completed := keyboard.WaitForIdle(waitCtx, time.Duration(cfg.IdleWaitSeconds)*time.Second)
 
-	if !wasIdle {
-		log.Info("keyboard activity detected or timeout, skipping kill")
+	if !completed {
+		log.Info("wait cancelled or timeout, skipping kill")
 		return nil
 	}
 

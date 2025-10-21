@@ -24,7 +24,7 @@ Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープな�
 - Karabiner-Elements
 - terminal-notifier（通知機能を使用する場合、推奨）
 
-**注意**: このツールはroot権限で実行されるため、アクセシビリティ権限は不要です。
+**注意**: このツールはLaunchDaemonとしてroot権限で実行されるため、追加の権限設定は不要です。
 
 ## インストール
 
@@ -64,8 +64,8 @@ make install
 **重要な仕様**:
 - このサービスはLaunchDaemonとしてroot権限で実行されます
 - `karabiner_grabber`がrootプロセスとして動作しているため、root権限が必要です
-- rootプロセスとして実行されるため、アクセシビリティ権限の設定は不要です
-- キーボードアイドル検知は、root環境では実際の監視を行わず、設定された秒数（デフォルト10秒）だけ待機します
+- rootプロセスとして実行されるため、追加の権限設定は不要です
+- プロセスをkillする前に、設定された秒数（デフォルト10秒）だけ待機します
 - 通知機能は`terminal-notifier`を使用（インストールされている場合）、フォールバックとして`osascript`を使用
 
 ログでサービスの動作を確認できます:
@@ -78,10 +78,10 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 
 ```
 {"level":"INFO","msg":"karabiner-monitor starting","config":"/Library/Application Support/karabiner-monitor/config.json"}
-{"level":"INFO","msg":"running as root, skipping accessibility permission check"}
+{"level":"INFO","msg":"running as LaunchDaemon with root privileges"}
 {"level":"INFO","msg":"starting monitoring loop","process":"karabiner_grabber","threshold_mb":50}
 {"level":"INFO","msg":"process found","pid":99849,"name":"karabiner_grabber"}
-{"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":97.1,"threshold_mb":50}
+{"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":797.5,"threshold_mb":50}
 ```
 
 ## 設定
@@ -105,7 +105,8 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 - **memory_threshold_mb**: メモリ使用量の閾値（MB）（デフォルト: 50）
 - **check_interval_seconds**: メモリチェック間隔（秒）（デフォルト: 60）
 - **idle_wait_seconds**: killする前の待機時間（秒）（デフォルト: 10）
-  - 注: rootプロセスとして実行されるため、実際のキーボード監視は行わず、この秒数だけ待機します
+  - プロセスをkillする前に、この秒数だけ待機します
+  - ユーザーが作業を保存する時間を確保するための猶予期間です
 - **log_max_size_mb**: ログファイルの最大サイズ（MB）（デフォルト: 10）
 - **log_max_age_days**: ログファイルの保持日数（デフォルト: 7）
 
@@ -224,7 +225,7 @@ karabiner-monitor/
    - macOS: `phys_footprint`による正確なメモリ計測（`top`コマンドのMEM列と同じ）
    - その他のOS: RSS（Resident Set Size）を使用
 4. **Keyboard**: 待機時間の管理
-   - rootプロセスではアクセシビリティAPIを使用せず、単純な時間待機
+   - プロセスをkillする前の待機時間を提供
 5. **Notifier**: terminal-notifierを使用したmacOS通知（osascriptへのフォールバック対応）
 
 ### 技術的な実装詳細
@@ -236,8 +237,8 @@ karabiner-monitor/
 この問題を解決するため、karabiner-monitorはLaunchDaemonとしてroot権限で実行されます:
 
 1. **プロセス監視**: rootとして実行されるため、rootプロセス(karabiner_grabber)の情報を取得可能
-2. **アクセシビリティ権限**: rootプロセスはアクセシビリティ権限チェックをスキップ
-3. **待機時間**: キーボード監視の代わりに、設定された秒数だけ待機してからkill実行
+2. **メモリ計測**: vmmapコマンドを使用してphys_footprintを正確に取得
+3. **待機時間**: プロセスをkillする前に設定された秒数だけ待機
 
 #### プロセス検索
 
