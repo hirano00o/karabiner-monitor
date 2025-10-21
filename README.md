@@ -1,80 +1,82 @@
 # Karabiner Monitor
 
-macOS用のkarabiner_grabberプロセスのメモリ監視・自動再起動ツール
+A memory monitoring and auto-restart tool for the karabiner_grabber process on macOS
 
-## 概要
+[日本語版 README](README.ja.md)
 
-Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープなどを経るとメモリ使用率が上昇し、ショートカットが効かなくなることがあります。このツールは、メモリ使用率を監視し、閾値を超えた場合に自動的にプロセスを再起動することで、この問題を解決します。
+## Overview
 
-## 主な機能
+The `karabiner_grabber` process in Karabiner-Elements can increase memory usage after events like screen sleep, causing keyboard shortcuts to stop working. This tool monitors memory usage and automatically restarts the process when it exceeds a threshold.
 
-- **メモリ監視**: 設定可能な間隔で`karabiner_grabber`プロセスのメモリ使用量をチェック
-- **自動再起動**: メモリ閾値を超えた場合に自動的にプロセスをkill（Karabinerが自動的に再起動）
-- **待機時間**: プロセスをkillする前に、設定された秒数だけ待機（デフォルト10秒）
-- **macOS通知**: terminal-notifierを使用した通知（推奨）、osascriptへのフォールバック対応
-- **詳細なログ**: すべての監視・再起動アクションを記録
-- **ログローテーション**: 設定可能なサイズと保持日数でログを自動ローテーション
-- **LaunchDaemon**: システム起動時に自動起動（rootプロセス監視のためroot権限で実行）
-- **プロセス検索**: プロセス名とコマンドライン引数の両方で検索可能
+## Features
 
-## 必要要件
+- **Memory Monitoring**: Check `karabiner_grabber` process memory usage at configurable intervals
+- **Auto Restart**: Automatically kill the process when memory threshold is exceeded (Karabiner restarts it automatically)
+- **Wait Period**: Configurable wait time before killing the process (default 10 seconds)
+- **macOS Notifications**: Uses terminal-notifier (recommended) with osascript fallback
+- **Detailed Logging**: Records all monitoring and restart actions
+- **Log Rotation**: Automatic log rotation with configurable size and retention
+- **LaunchDaemon**: Starts automatically at system boot (runs with root privileges to monitor root processes)
+- **Process Search**: Finds processes by both name and command line arguments
 
-- macOS 12以降
-- Go 1.21以降（ビルド時）
+## Requirements
+
+- macOS 12 or later
+- Go 1.21 or later (for building)
 - Karabiner-Elements
-- terminal-notifier（通知機能を使用する場合、推奨）
+- terminal-notifier (optional, recommended for notifications)
 
-**注意**: このツールはLaunchDaemonとしてroot権限で実行されるため、追加の権限設定は不要です。
+**Note**: This tool runs as a LaunchDaemon with root privileges, so no additional permission settings are required.
 
-## インストール
+## Installation
 
-### 1. リポジトリのクローン
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/hirano00o/karabiner-monitor.git
 cd karabiner-monitor
 ```
 
-### 2. terminal-notifierのインストール（オプション、推奨）
+### 2. Install terminal-notifier (Optional, Recommended)
 
-通知機能を使用する場合は、terminal-notifierをインストールしてください:
+If you want to receive notifications:
 
 ```bash
 brew install terminal-notifier
 ```
 
-terminal-notifierはLaunchDaemonからの通知に対応しており、rootプロセスからでもユーザーに通知を送ることができます。
+terminal-notifier supports notifications from LaunchDaemons and can send notifications to users even from root processes.
 
-### 3. ビルドとインストール
+### 3. Build and Install
 
 ```bash
 make install
 ```
 
-このコマンドは以下を実行します:
-- バイナリのビルド
-- `/usr/local/bin`へのインストール
-- 設定ファイルの生成（`/Library/Application Support/karabiner-monitor/config.json`）
-- LaunchDaemon の登録と起動（root権限で実行）
+This command will:
+- Build the binary
+- Install to `/usr/local/bin`
+- Create configuration file (`/Library/Application Support/karabiner-monitor/config.json`)
+- Register and start the LaunchDaemon (runs with root privileges)
 
-### 4. 動作確認
+### 4. Verify Installation
 
-インストールが完了すると、LaunchDaemonとしてサービスが起動します。
+Once installed, the service starts as a LaunchDaemon.
 
-**重要な仕様**:
-- このサービスはLaunchDaemonとしてroot権限で実行されます
-- `karabiner_grabber`がrootプロセスとして動作しているため、root権限が必要です
-- rootプロセスとして実行されるため、追加の権限設定は不要です
-- プロセスをkillする前に、設定された秒数（デフォルト10秒）だけ待機します
-- 通知機能は`terminal-notifier`を使用（インストールされている場合）、フォールバックとして`osascript`を使用
+**Important specifications**:
+- This service runs as a LaunchDaemon with root privileges
+- Root privileges are required because `karabiner_grabber` runs as a root process
+- No additional permission settings are required as it runs as root
+- Waits for the configured number of seconds (default 10) before killing the process
+- Uses `terminal-notifier` for notifications (if installed), falls back to `osascript`
 
-ログでサービスの動作を確認できます:
+Check the service operation in the logs:
 
 ```bash
 sudo tail -f /var/log/karabiner-monitor/monitor.log
 ```
 
-正常に動作している場合、以下のようなログが表示されます:
+When operating normally, you should see logs like:
 
 ```
 {"level":"INFO","msg":"karabiner-monitor starting","config":"/Library/Application Support/karabiner-monitor/config.json"}
@@ -84,9 +86,9 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 {"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":797.5,"threshold_mb":50}
 ```
 
-## 設定
+## Configuration
 
-設定ファイル: `/Library/Application Support/karabiner-monitor/config.json`
+Configuration file: `/Library/Application Support/karabiner-monitor/config.json`
 
 ```json
 {
@@ -99,64 +101,64 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 }
 ```
 
-### 設定項目
+### Configuration Options
 
-- **process_name**: 監視するプロセス名（デフォルト: `karabiner_grabber`）
-- **memory_threshold_mb**: メモリ使用量の閾値（MB）（デフォルト: 50）
-- **check_interval_seconds**: メモリチェック間隔（秒）（デフォルト: 60）
-- **idle_wait_seconds**: killする前の待機時間（秒）（デフォルト: 10）
-  - プロセスをkillする前に、この秒数だけ待機します
-  - ユーザーが作業を保存する時間を確保するための猶予期間です
-- **log_max_size_mb**: ログファイルの最大サイズ（MB）（デフォルト: 10）
-- **log_max_age_days**: ログファイルの保持日数（デフォルト: 7）
+- **process_name**: Process name to monitor (default: `karabiner_grabber`)
+- **memory_threshold_mb**: Memory usage threshold in MB (default: 50)
+- **check_interval_seconds**: Memory check interval in seconds (default: 60)
+- **idle_wait_seconds**: Wait time before killing process in seconds (default: 10)
+  - Waits this many seconds before killing the process
+  - Provides a grace period for users to save their work
+- **log_max_size_mb**: Maximum log file size in MB (default: 10)
+- **log_max_age_days**: Log file retention days (default: 7)
 
-## 使用方法
+## Usage
 
-### サービスの状態確認
+### Check Service Status
 
 ```bash
 sudo launchctl list | grep karabiner.monitor
 ```
 
-### ログの確認
+### View Logs
 
 ```bash
-# アプリケーションログ
+# Application log
 sudo tail -f /var/log/karabiner-monitor/monitor.log
 
-# 標準出力
+# Standard output
 sudo tail -f /var/log/karabiner-monitor.stdout
 
-# 標準エラー出力
+# Standard error
 sudo tail -f /var/log/karabiner-monitor.stderr
 ```
 
-### サービスの停止
+### Stop Service
 
 ```bash
 sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
 ```
 
-### サービスの開始
+### Start Service
 
 ```bash
 sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
 ```
 
-### ローカル実行（デバッグ用）
+### Run Locally (for debugging)
 
 ```bash
-# rootで実行する必要があります
+# Must run as root
 sudo /usr/local/bin/karabiner-monitor
 ```
 
-## アンインストール
+## Uninstallation
 
 ```bash
 make uninstall
 ```
 
-設定ファイルとログを完全に削除する場合:
+To completely remove configuration files and logs:
 
 ```bash
 sudo rm -rf "/Library/Application Support/karabiner-monitor"
@@ -165,235 +167,235 @@ sudo rm -f /var/log/karabiner-monitor.stdout
 sudo rm -f /var/log/karabiner-monitor.stderr
 ```
 
-## 開発
+## Development
 
-### ビルド
+### Build
 
 ```bash
 make build
 ```
 
-### テスト実行
+### Run Tests
 
 ```bash
 make test
 ```
 
-### Lint実行
+### Run Linter
 
 ```bash
 make lint
 ```
 
-### コードフォーマット
+### Format Code
 
 ```bash
 make fmt
 ```
 
-### すべてのチェック実行
+### Run All Checks
 
 ```bash
 make check
 ```
 
-## アーキテクチャ
+## Architecture
 
-プロジェクト構造:
+Project structure:
 
 ```
 karabiner-monitor/
-├── cmd/karabiner-monitor/   # メインアプリケーション
+├── cmd/karabiner-monitor/   # Main application
 ├── internal/
-│   ├── config/               # 設定管理
-│   ├── logger/               # ログシステム
-│   ├── monitor/              # プロセス監視
-│   ├── keyboard/             # キー入力監視（CGo）
-│   └── notifier/             # macOS通知
-├── scripts/                  # インストール/アンインストールスクリプト
-├── configs/                  # LaunchAgent plist
-└── Makefile                  # ビルド・デプロイ自動化
+│   ├── config/               # Configuration management
+│   ├── logger/               # Logging system
+│   ├── monitor/              # Process monitoring
+│   ├── keyboard/             # Wait time management
+│   └── notifier/             # macOS notifications
+├── scripts/                  # Install/uninstall scripts
+├── configs/                  # LaunchDaemon plist
+└── Makefile                  # Build and deployment automation
 ```
 
-### 主要コンポーネント
+### Key Components
 
-1. **Config**: JSON設定ファイルの読み込みと検証
-2. **Logger**: lumberjackを使用したログローテーション
-3. **Monitor**: gopsutil/v4を使用したプロセス監視とmacOS固有のメモリ計測
-   - プロセス名での完全一致検索
-   - コマンドライン引数での部分一致検索
-   - macOS: `phys_footprint`による正確なメモリ計測（`top`コマンドのMEM列と同じ）
-   - その他のOS: RSS（Resident Set Size）を使用
-4. **Keyboard**: 待機時間の管理
-   - プロセスをkillする前の待機時間を提供
-5. **Notifier**: terminal-notifierを使用したmacOS通知（osascriptへのフォールバック対応）
+1. **Config**: Load and validate JSON configuration files
+2. **Logger**: Log rotation using lumberjack
+3. **Monitor**: Process monitoring and macOS-specific memory measurement using gopsutil/v4
+   - Exact process name matching
+   - Partial command line argument matching
+   - macOS: Accurate memory measurement using `phys_footprint` (same as top command's MEM column)
+   - Other OS: Uses RSS (Resident Set Size)
+4. **Keyboard**: Wait time management
+   - Provides wait time before killing processes
+5. **Notifier**: macOS notifications using terminal-notifier (with osascript fallback)
 
-### 技術的な実装詳細
+### Technical Implementation Details
 
-#### rootプロセスとしての実行
+#### Running as Root Process
 
-`karabiner_grabber`はrootプロセスとして実行されており、通常のユーザープロセスからはアクセスできません。gopsutilライブラリでrootプロセスの情報を取得しようとすると"invalid argument"エラーが発生します。
+`karabiner_grabber` runs as a root process and cannot be accessed from regular user processes. Attempting to get root process information with the gopsutil library results in an "invalid argument" error.
 
-この問題を解決するため、karabiner-monitorはLaunchDaemonとしてroot権限で実行されます:
+To solve this problem, karabiner-monitor runs as a LaunchDaemon with root privileges:
 
-1. **プロセス監視**: rootとして実行されるため、rootプロセス(karabiner_grabber)の情報を取得可能
-2. **メモリ計測**: vmmapコマンドを使用してphys_footprintを正確に取得
-3. **待機時間**: プロセスをkillする前に設定された秒数だけ待機
+1. **Process Monitoring**: Can access root process (karabiner_grabber) information by running as root
+2. **Memory Measurement**: Uses vmmap command to accurately get phys_footprint
+3. **Wait Time**: Waits the configured number of seconds before killing the process
 
-#### プロセス検索
+#### Process Search
 
-FindProcess関数は2段階で検索を行います:
+The FindProcess function searches in two stages:
 
-1. **完全一致検索**: プロセス名が完全に一致するかチェック
-2. **コマンドライン検索**: コマンドライン引数に指定文字列が含まれるかチェック
+1. **Exact Match**: Check if the process name matches exactly
+2. **Command Line Search**: Check if the search string is contained in command line arguments
 
-これにより、`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`のようなフルパスで実行されているプロセスも検出できます。
+This allows detection of processes running with full paths like `/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`.
 
-#### 通知システム
+#### Notification System
 
-LaunchDaemonから通知を送信するには特別な対応が必要です:
+Special handling is required to send notifications from a LaunchDaemon:
 
-1. **terminal-notifier優先**: LaunchDaemonからでも動作する`terminal-notifier`を最初に試行
-2. **osascriptへのフォールバック**: `terminal-notifier`が利用できない場合は`osascript`を使用
-3. **エラーハンドリング**: 両方が失敗した場合のみエラーを返す
+1. **terminal-notifier First**: First tries `terminal-notifier` which works from LaunchDaemons
+2. **osascript Fallback**: Uses `osascript` if `terminal-notifier` is not available
+3. **Error Handling**: Returns error only if both fail
 
-`terminal-notifier`は`brew install terminal-notifier`でインストール可能で、LaunchDaemonからの通知に最適です。
+`terminal-notifier` can be installed with `brew install terminal-notifier` and is ideal for notifications from LaunchDaemons.
 
-#### メモリ計測
+#### Memory Measurement
 
-macOSとその他のOSで異なるメモリ計測方法を使用します:
+Different memory measurement methods are used for macOS and other operating systems:
 
 ##### macOS (darwin)
 
-macOSでは`phys_footprint`を使用してメモリ使用量を計測します。これは`top`コマンドのMEM列に表示される値と同じで、プロセスが実際に使用しているメモリの正確な表現です。
+On macOS, `phys_footprint` is used to measure memory usage. This is the same value displayed in the MEM column of the top command and represents an accurate view of the process's actual memory usage.
 
-**phys_footprintとは**:
-- macOSカーネルが計算するプロセスの物理メモリフットプリント
-- RSS（Resident Set Size）よりも正確な実メモリ使用量
-- カーネルの計算式: `(internal - alternate_accounting) + (internal_compressed - alternate_accounting_compressed) + iokit_mapped + purgeable_nonvolatile + purgeable_nonvolatile_compressed + page_table`
+**What is phys_footprint**:
+- Physical memory footprint calculated by the macOS kernel
+- More accurate actual memory usage than RSS (Resident Set Size)
+- Kernel calculation formula: `(internal - alternate_accounting) + (internal_compressed - alternate_accounting_compressed) + iokit_mapped + purgeable_nonvolatile + purgeable_nonvolatile_compressed + page_table`
 
-**実装方法**:
-- `vmmap --summary <pid>`コマンドを使用してPhysical footprintを取得
-- rootプロセスとして実行される場合は`vmmap`を直接実行
-- 非rootの場合は`sudo -n vmmap`を使用（sudoersでNOPASSWD設定が必要）
-- 正規表現でvmmap出力を解析: `Physical footprint:\s+([0-9.]+)([KMGT])?`
-- K/M/G/T単位を自動的にMBに変換
+**Implementation**:
+- Uses `vmmap --summary <pid>` command to get Physical footprint
+- When running as root process, executes `vmmap` directly
+- For non-root, uses `sudo -n vmmap` (requires NOPASSWD setting in sudoers)
+- Parses vmmap output with regex: `Physical footprint:\s+([0-9.]+)([KMGT])?`
+- Automatically converts K/M/G/T units to MB
 
-**RSSとの比較**:
-- RSS: 物理メモリに常駐しているページのサイズ（共有メモリを含む）
-- phys_footprint: プロセスが実際に使用している物理メモリ（共有メモリの正確な割り当てを考慮）
-- 例: `karabiner_grabber`の場合、RSSは約13MBだが、phys_footprintは約797MB
+**Comparison with RSS**:
+- RSS: Size of pages resident in physical memory (includes shared memory)
+- phys_footprint: Physical memory actually used by the process (considers accurate allocation of shared memory)
+- Example: For `karabiner_grabber`, RSS is about 13MB but phys_footprint is about 797MB
 
-**制限事項**:
-- `vmmap`コマンドの実行には約2秒かかる場合があります
-- rootプロセスに対しては、実行側もroot権限が必要です
+**Limitations**:
+- `vmmap` command execution can take about 2 seconds
+- For root processes, the executor also requires root privileges
 
-##### その他のOS (Linux, Windows)
+##### Other OS (Linux, Windows)
 
-非macOSプラットフォームでは、gopsutilライブラリを使用してRSS（Resident Set Size）を取得します:
-- RSS: プロセスが物理メモリに保持しているメモリのサイズ
-- バイトからメガバイトに変換して返します
+On non-macOS platforms, uses gopsutil library to get RSS (Resident Set Size):
+- RSS: Size of memory the process holds in physical memory
+- Converts from bytes to megabytes
 
-## ライセンス
+## License
 
 MIT License
 
-## 貢献
+## Contributing
 
-プルリクエストを歓迎します。大きな変更の場合は、まずissueを開いて変更内容を議論してください。
+Pull requests are welcome. For major changes, please open an issue first to discuss the proposed changes.
 
-## トラブルシューティング
+## Troubleshooting
 
-### プロセスが見つからない（process not found）
+### Process Not Found
 
-以下の原因が考えられます:
+Possible causes:
 
-1. **karabiner_grabberが実行されていない**: プロセスが起動すると自動的に監視が開始されます
+1. **karabiner_grabber is not running**: Monitoring starts automatically when the process launches
    ```bash
    ps aux | grep karabiner_grabber | grep -v grep
    ```
 
-2. **LaunchDaemonが正しく起動していない**: サービスの状態を確認してください
+2. **LaunchDaemon not started correctly**: Check service status
    ```bash
    sudo launchctl list | grep karabiner.monitor
    ```
 
-3. **サービスが起動に失敗している**: エラーログを確認してください
+3. **Service failed to start**: Check error logs
    ```bash
    sudo tail -50 /var/log/karabiner-monitor.stderr
    ```
 
-### サービスが頻繁に再起動している
+### Service Restarting Frequently
 
-`/var/log/karabiner-monitor.stderr`に繰り返しエラーが記録されている場合:
+If `/var/log/karabiner-monitor.stderr` shows repeated errors:
 
-1. ログを確認してエラー内容を特定
-2. 設定ファイルが正しいか確認: `/Library/Application Support/karabiner-monitor/config.json`
-3. サービスを停止して問題を解決してから再起動:
+1. Check logs to identify the error
+2. Verify configuration file: `/Library/Application Support/karabiner-monitor/config.json`
+3. Stop service, fix the problem, then restart:
    ```bash
    sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
-   # 問題を修正
+   # Fix the issue
    sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
    ```
 
-### メモリ閾値を超えてもkillされない
+### Process Not Killed Despite Exceeding Memory Threshold
 
-1. ログでメモリ使用量を確認:
+1. Check memory usage in logs:
    ```bash
    sudo tail -f /var/log/karabiner-monitor/monitor.log
    ```
 
-2. `idle_wait_seconds`の待機時間後にkillされます（デフォルト10秒）
+2. Process is killed after `idle_wait_seconds` wait time (default 10 seconds)
 
-3. killに成功すると以下のようなログが表示されます:
+3. When kill succeeds, you'll see logs like:
    ```
-   {"level":"INFO","msg":"killing process","pid":99849,"memory_mb":97.1}
+   {"level":"INFO","msg":"killing process","pid":99849,"memory_mb":797.5}
    {"level":"INFO","msg":"process killed successfully","pid":99849}
    ```
 
-### 通知が表示されない
+### Notifications Not Appearing
 
-**推奨**: terminal-notifierをインストールすることで、LaunchDaemonからでも通知が表示されます。
+**Recommended**: Install terminal-notifier to display notifications from LaunchDaemons.
 
 ```bash
 brew install terminal-notifier
 ```
 
-terminal-notifierがインストールされていない場合、osascriptにフォールバックしますが、rootプロセスからの通知は制限される場合があります。
+If terminal-notifier is not installed, it falls back to osascript, but notifications from root processes may be limited.
 
-**通知が表示されない場合の確認方法**:
+**How to verify notifications**:
 
-1. **terminal-notifierがインストールされているか確認**:
+1. **Check if terminal-notifier is installed**:
    ```bash
    which terminal-notifier
    ```
 
-2. **ログで通知送信のエラーを確認**:
+2. **Check for notification errors in logs**:
    ```bash
    sudo tail -50 /var/log/karabiner-monitor.stderr | grep notification
    ```
 
-3. **ログファイルで再起動を確認**（通知の代替）:
+3. **Confirm restarts in log files** (alternative to notifications):
    ```bash
    sudo tail -f /var/log/karabiner-monitor/monitor.log | grep "killed"
    ```
 
-4. **karabiner_grabberのPID変化を確認**:
+4. **Check karabiner_grabber PID changes**:
    ```bash
-   # 再起動前のPIDを記録
+   # Record PID before restart
    ps aux | grep karabiner_grabber | grep -v grep
 
-   # しばらく待ってから再度確認
-   # PIDが変わっていれば再起動された
+   # Check again after a while
+   # If PID changed, process was restarted
    ```
 
-**注意**: terminal-notifierをインストール後は、サービスの再起動が必要です:
+**Note**: After installing terminal-notifier, restart the service:
 ```bash
 sudo launchctl unload /Library/LaunchDaemons/com.karabiner.monitor.plist
 sudo launchctl load /Library/LaunchDaemons/com.karabiner.monitor.plist
 ```
 
-## 参考
+## References
 
 - [Karabiner-Elements](https://karabiner-elements.pqrs.org/)
 - [gopsutil](https://github.com/shirou/gopsutil)
