@@ -47,6 +47,9 @@ clean: ## Clean build artifacts
 install: build ## Install the service (requires sudo)
 	@echo "Installing $(BINARY)..."
 	@./scripts/install.sh
+	@echo "Cleaning up build artifacts..."
+	@rm -f $(BUILD_DIR)/$(BINARY)
+	@echo "✓ Installation complete"
 
 uninstall: ## Uninstall the service (requires sudo)
 	@echo "Uninstalling $(BINARY)..."
