@@ -110,6 +110,37 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 - **log_max_size_mb**: ログファイルの最大サイズ（MB）（デフォルト: 10）
 - **log_max_age_days**: ログファイルの保持日数（デフォルト: 7）
 
+### 設定の自動リロード
+
+設定ファイルは自動的に監視されます。設定ファイルを編集して保存すると、再インストールやサービスの再起動なしに変更が自動的に適用されます。
+
+**設定の更新手順:**
+
+1. 設定ファイルを編集:
+   ```bash
+   sudo vim "/Library/Application Support/karabiner-monitor/config.json"
+   ```
+
+2. 変更を加える（例: `memory_threshold_mb` を 50 から 100 に変更）
+
+3. ファイルを保存 - 変更は即座に適用されます
+
+4. ログで再読み込みを確認:
+   ```bash
+   sudo tail -f /var/log/karabiner-monitor/monitor.log
+   ```
+
+次のようなログエントリが表示されます:
+```
+{"level":"INFO","msg":"config file changed, reloading","event":"WRITE"}
+{"level":"INFO","msg":"config reloaded successfully","process":"karabiner_grabber","threshold_mb":100,...}
+```
+
+**注意事項:**
+- 新しい設定が無効な場合、古い設定が保持され、エラーがログに記録されます
+- `check_interval_seconds` の変更は次回のチェックサイクルから有効になります
+- サービスの再起動や再インストールは不要です
+
 ## 使用方法
 
 ### サービスの状態確認

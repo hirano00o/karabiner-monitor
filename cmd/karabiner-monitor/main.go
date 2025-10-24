@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/hirano00o/karabiner-monitor/internal/config"
 	"github.com/hirano00o/karabiner-monitor/internal/keyboard"
 	"github.com/hirano00o/karabiner-monitor/internal/logger"
@@ -16,10 +19,10 @@ import (
 )
 
 func main() {
-	// Load configuration
+	// Load configuration using ConfigManager
 	// LaunchDaemon runs as root, so use system-wide config path
 	configPath := "/Library/Application Support/karabiner-monitor/config.json"
-	cfg, err := config.Load(configPath)
+	configManager, err := config.NewManager(configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 		os.Exit(1)
@@ -27,10 +30,32 @@ func main() {
 
 	// Initialize logger
 	logPath := "/var/log/karabiner-monitor/monitor.log"
+	cfg := configManager.Get()
 	log := logger.New(logPath, cfg)
 
 	log.Info("karabiner-monitor starting", "config", configPath)
 	log.Info("running as LaunchDaemon with root privileges")
+
+	// Setup file watcher for config auto-reload
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Error("failed to create file watcher", "error", err)
+		fmt.Fprintf(os.Stderr, "failed to create file watcher: %v\n", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.Error("failed to close file watcher", "error", err)
+		}
+	}()
+
+	// Watch the config file
+	if err := watcher.Add(configPath); err != nil {
+		log.Error("failed to watch config file", "error", err, "path", configPath)
+		fmt.Fprintf(os.Stderr, "failed to watch config file: %v\n", err)
+		os.Exit(1)
+	}
+	log.Info("watching config file for changes", "path", configPath)
 
 	// Setup signal handling for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -45,7 +70,47 @@ func main() {
 		cancel()
 	}()
 
+	// Handle config file changes
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				// Filter out irrelevant events and temporary files
+				if !isRelevantConfigChange(event) {
+					continue
+				}
+
+				log.Info("config file changed, reloading", "event", event.Op.String())
+
+				if err := configManager.Reload(); err != nil {
+					log.Error("failed to reload config, keeping old config", "error", err)
+				} else {
+					newCfg := configManager.Get()
+					log.Info("config reloaded successfully",
+						"process", newCfg.ProcessName,
+						"threshold_mb", newCfg.MemoryThresholdMB,
+						"check_interval_seconds", newCfg.CheckIntervalSeconds,
+						"idle_wait_seconds", newCfg.IdleWaitSeconds)
+				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Error("file watcher error", "error", err)
+			}
+		}
+	}()
+
 	// Main monitoring loop
+	cfg = configManager.Get()
 	log.Info("starting monitoring loop",
 		"process", cfg.ProcessName,
 		"threshold_mb", cfg.MemoryThresholdMB,
@@ -62,11 +127,50 @@ func main() {
 			return
 
 		case <-ticker.C:
-			if err := checkAndKillIfNeeded(ctx, cfg, log); err != nil {
+			// Get latest config for each check
+			currentCfg := configManager.Get()
+			if err := checkAndKillIfNeeded(ctx, currentCfg, log); err != nil {
 				log.Error("error during check", "error", err)
 			}
 		}
 	}
+}
+
+// isRelevantConfigChange determines if a file system event is relevant for config reload.
+// It filters out temporary files created by editors (vim, emacs, etc.) and irrelevant operations.
+//
+// Temporary file patterns to ignore:
+//   - Vim: .swp, .swo, ~
+//   - Emacs: #, ~
+//   - General: .tmp, .bak
+//
+// Example:
+//
+//	event := fsnotify.Event{Name: "config.json", Op: fsnotify.Write}
+//	if isRelevantConfigChange(event) {
+//		// Reload config
+//	}
+func isRelevantConfigChange(event fsnotify.Event) bool {
+	// Only care about write and create events
+	if event.Op&fsnotify.Write != fsnotify.Write && event.Op&fsnotify.Create != fsnotify.Create {
+		return false
+	}
+
+	// Get the base filename
+	filename := filepath.Base(event.Name)
+
+	// Ignore temporary files created by editors
+	if strings.HasPrefix(filename, ".") || // Hidden files like .swp
+		strings.HasSuffix(filename, "~") || // Backup files
+		strings.HasPrefix(filename, "#") || // Emacs temp files
+		strings.HasSuffix(filename, ".tmp") || // Temp files
+		strings.HasSuffix(filename, ".bak") || // Backup files
+		strings.HasSuffix(filename, ".swp") || // Vim swap files
+		strings.HasSuffix(filename, ".swo") { // Vim swap files
+		return false
+	}
+
+	return true
 }
 
 // checkAndKillIfNeeded checks the process memory usage and kills it if necessary.

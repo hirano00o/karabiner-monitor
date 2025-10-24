@@ -112,6 +112,37 @@ Configuration file: `/Library/Application Support/karabiner-monitor/config.json`
 - **log_max_size_mb**: Maximum log file size in MB (default: 10)
 - **log_max_age_days**: Log file retention days (default: 7)
 
+### Configuration Auto-Reload
+
+The configuration file is automatically monitored for changes. When you modify and save the configuration file, the changes are automatically applied without needing to reinstall or restart the service.
+
+**How to update configuration:**
+
+1. Edit the configuration file:
+   ```bash
+   sudo vim "/Library/Application Support/karabiner-monitor/config.json"
+   ```
+
+2. Make your changes (e.g., change `memory_threshold_mb` from 50 to 100)
+
+3. Save the file - changes are applied immediately
+
+4. Check the log to confirm the reload:
+   ```bash
+   sudo tail -f /var/log/karabiner-monitor/monitor.log
+   ```
+
+You should see log entries like:
+```
+{"level":"INFO","msg":"config file changed, reloading","event":"WRITE"}
+{"level":"INFO","msg":"config reloaded successfully","process":"karabiner_grabber","threshold_mb":100,...}
+```
+
+**Notes:**
+- If the new configuration is invalid, the old configuration is retained and an error is logged
+- Changes to `check_interval_seconds` take effect at the next check cycle
+- No service restart or reinstallation is required
+
 ## Usage
 
 ### Check Service Status
