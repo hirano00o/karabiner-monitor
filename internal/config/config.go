@@ -41,6 +41,9 @@ type Config struct {
 
 	// LogMaxAgeDays is the maximum number of days to retain old log files
 	LogMaxAgeDays int `json:"log_max_age_days"`
+
+	// Debug enables debug logging when set to true
+	Debug bool `json:"debug"`
 }
 
 // Default returns a Config with default values.
@@ -52,6 +55,7 @@ type Config struct {
 //   - IdleWaitSeconds: 10
 //   - LogMaxSizeMB: 10
 //   - LogMaxAgeDays: 7
+//   - Debug: false
 //
 // Example:
 //
@@ -66,6 +70,7 @@ func Default() *Config {
 		IdleWaitSeconds:      10,
 		LogMaxSizeMB:         10,
 		LogMaxAgeDays:        7,
+		Debug:                false,
 	}
 }
 

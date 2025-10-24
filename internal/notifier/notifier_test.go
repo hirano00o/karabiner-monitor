@@ -1,9 +1,13 @@
 package notifier
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hirano00o/karabiner-monitor/internal/config"
+	"github.com/hirano00o/karabiner-monitor/internal/logger"
 )
 
 // TestFormatMessage tests notification message formatting
@@ -32,10 +36,20 @@ func TestSendNotification(t *testing.T) {
 	// Actual notification won't be sent in test environment
 	t.Skip("Skipping TestSendNotification as it requires osascript and may show actual notifications")
 
+	// Create a temporary logger for testing
+	tmpDir := t.TempDir()
+	logPath := filepath.Join(tmpDir, "test.log")
+	cfg := &config.Config{
+		LogMaxSizeMB:  10,
+		LogMaxAgeDays: 7,
+		Debug:         true,
+	}
+	log := logger.New(logPath, cfg)
+
 	memoryMB := 50.5
 	killTime := time.Now()
 
-	err := SendNotification(memoryMB, killTime)
+	err := SendNotification(memoryMB, killTime, log)
 	if err != nil {
 		t.Logf("SendNotification error (expected in test environment): %v", err)
 	}

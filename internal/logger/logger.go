@@ -41,12 +41,18 @@ type Logger struct {
 //	logger.Info("service started", "port", 8080)
 //	// Output (in log file): {"time":"2025-01-15T10:30:00Z","level":"INFO","msg":"service started","port":8080}
 func New(logPath string, cfg *config.Config) *Logger {
+	// Determine log level based on debug configuration
+	logLevel := slog.LevelInfo
+	if cfg.Debug {
+		logLevel = slog.LevelDebug
+	}
+
 	// Create log directory if not exists
 	logDir := filepath.Dir(logPath)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		// Fall back to stderr if directory creation fails
 		handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
+			Level: logLevel,
 		})
 		return &Logger{slog.New(handler)}
 	}
@@ -65,7 +71,7 @@ func New(logPath string, cfg *config.Config) *Logger {
 
 	// Create JSON handler for structured logging
 	handler := slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+		Level: logLevel,
 	})
 
 	return &Logger{slog.New(handler)}

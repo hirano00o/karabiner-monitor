@@ -133,7 +133,7 @@ func checkAndKillIfNeeded(ctx context.Context, cfg *config.Config, log *logger.L
 	log.Info("process killed successfully", "pid", proc.PID, "memory_mb", memoryMB)
 
 	// Send notification
-	if err := notifier.SendNotification(memoryMB, killTime); err != nil {
+	if err := notifier.SendNotification(memoryMB, killTime, log); err != nil {
 		log.Error("failed to send notification", "error", err)
 		// Don't return error, notification failure shouldn't stop the monitor
 	}

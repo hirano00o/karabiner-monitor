@@ -37,7 +37,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
   "check_interval_seconds": 60,
   "idle_wait_seconds": 10,
   "log_max_size_mb": 10,
-  "log_max_age_days": 7
+  "log_max_age_days": 7,
+  "debug": false
 }
 EOF
     echo "✓ Default configuration created at: $CONFIG_FILE"
