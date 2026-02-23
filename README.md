@@ -24,6 +24,7 @@ The `Karabiner-Core-Service` process in Karabiner-Elements can increase memory u
 - macOS 12 or later
 - Go 1.21 or later (for building)
 - Karabiner-Elements 15.7.0 or later
+  - `Karabiner-Core-Service` was introduced in 15.7.0, replacing `karabiner_grabber`
 - terminal-notifier (optional, recommended for notifications)
 
 **Note**: This tool runs as a LaunchDaemon with root privileges, so no additional permission settings are required.
