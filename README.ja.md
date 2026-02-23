@@ -21,7 +21,7 @@ Karabiner-Elementsの`Karabiner-Core-Service`プロセスは、画面スリー�
 
 - macOS 12以降
 - Go 1.21以降（ビルド時）
-- Karabiner-Elements
+- Karabiner-Elements 15.7.0以降
 - terminal-notifier（通知機能を使用する場合、推奨）
 
 **注意**: このツールはLaunchDaemonとしてroot権限で実行されるため、追加の権限設定は不要です。
