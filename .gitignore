@@ -14,7 +14,7 @@
 # Build artifacts
 /bin/
 /dist/
-karabiner-monitor
+/karabiner-monitor
 memory-debug
 
 # Go workspace file
