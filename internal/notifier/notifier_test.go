@@ -49,7 +49,7 @@ func TestSendNotification(t *testing.T) {
 	memoryMB := 50.5
 	killTime := time.Now()
 
-	err := SendNotification(memoryMB, killTime, log)
+	err := SendNotification("Karabiner-Core-Service", memoryMB, killTime, log)
 	if err != nil {
 		t.Logf("SendNotification error (expected in test environment): %v", err)
 	}

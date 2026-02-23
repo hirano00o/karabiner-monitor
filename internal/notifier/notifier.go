@@ -69,17 +69,18 @@ func FormatMessage(memoryMB float64, killTime time.Time) string {
 // after executing the terminal-notifier command.
 //
 // Parameters:
+//   - processName: Name of the process that was restarted (used in the notification subtitle)
 //   - memoryMB: Memory usage in megabytes
 //   - killTime: Time when the process was killed
 //   - log: Logger instance for debug and error logging
 //
 // Example:
 //
-//	err := SendNotification(50.5, time.Now(), logger)
+//	err := SendNotification("Karabiner-Core-Service", 50.5, time.Now(), logger)
 //	if err != nil {
 //		logger.Error("failed to send notification", "error", err)
 //	}
-func SendNotification(memoryMB float64, killTime time.Time, log *logger.Logger) error {
+func SendNotification(processName string, memoryMB float64, killTime time.Time, log *logger.Logger) error {
 	message := FormatMessage(memoryMB, killTime)
 
 	log.Debug("attempting to send notification", "message", message)
@@ -97,7 +98,7 @@ func SendNotification(memoryMB float64, killTime time.Time, log *logger.Logger) 
 	cmd := exec.Command("launchctl", "asuser", uid,
 		"/opt/homebrew/bin/terminal-notifier",
 		"-title", "Karabiner Monitor",
-		"-subtitle", "karabiner_grabber restarted",
+		"-subtitle", fmt.Sprintf("%s restarted", processName),
 		"-message", message,
 		"-sound", "default",
 		"-ignoreDnD")
@@ -110,8 +111,8 @@ func SendNotification(memoryMB float64, killTime time.Time, log *logger.Logger) 
 	if err != nil {
 		log.Debug("terminal-notifier failed, falling back to osascript", "error", err)
 		// Fallback to osascript if terminal-notifier is not available
-		script := fmt.Sprintf(`display notification "%s" with title "Karabiner Monitor" subtitle "karabiner_grabber restarted"`,
-			message)
+		script := fmt.Sprintf(`display notification "%s" with title "Karabiner Monitor" subtitle "%s restarted"`,
+			message, processName)
 
 		fallbackCmd := exec.Command("launchctl", "asuser", uid, "osascript", "-e", script)
 		log.Debug("running fallback command", "command", fallbackCmd.Path, "args", fallbackCmd.Args)

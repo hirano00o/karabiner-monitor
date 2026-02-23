@@ -1,14 +1,14 @@
 # Karabiner Monitor
 
-macOS用のkarabiner_grabberプロセスのメモリ監視・自動再起動ツール
+macOS用のKarabiner-Core-Serviceプロセスのメモリ監視・自動再起動ツール
 
 ## 概要
 
-Karabiner-Elementsの`karabiner_grabber`プロセスは、画面スリープなどを経るとメモリ使用率が上昇し、ショートカットが効かなくなることがあります。このツールは、メモリ使用率を監視し、閾値を超えた場合に自動的にプロセスを再起動することで、この問題を解決します。
+Karabiner-Elementsの`Karabiner-Core-Service`プロセスは、画面スリープなどを経るとメモリ使用率が上昇し、ショートカットが効かなくなることがあります。このツールは、メモリ使用率を監視し、閾値を超えた場合に自動的にプロセスを再起動することで、この問題を解決します。
 
 ## 主な機能
 
-- **メモリ監視**: 設定可能な間隔で`karabiner_grabber`プロセスのメモリ使用量をチェック
+- **メモリ監視**: 設定可能な間隔で`Karabiner-Core-Service`プロセスのメモリ使用量をチェック
 - **自動再起動**: メモリ閾値を超えた場合に自動的にプロセスをkill（Karabinerが自動的に再起動）
 - **待機時間**: プロセスをkillする前に、設定された秒数だけ待機（デフォルト10秒）
 - **macOS通知**: terminal-notifierを使用した通知（推奨）、osascriptへのフォールバック対応
@@ -63,7 +63,7 @@ make install
 
 **重要な仕様**:
 - このサービスはLaunchDaemonとしてroot権限で実行されます
-- `karabiner_grabber`がrootプロセスとして動作しているため、root権限が必要です
+- `Karabiner-Core-Service`がrootプロセスとして動作しているため、root権限が必要です
 - rootプロセスとして実行されるため、追加の権限設定は不要です
 - プロセスをkillする前に、設定された秒数（デフォルト10秒）だけ待機します
 - 通知機能は`terminal-notifier`を使用（インストールされている場合）、フォールバックとして`osascript`を使用
@@ -79,8 +79,8 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 ```
 {"level":"INFO","msg":"karabiner-monitor starting","config":"/Library/Application Support/karabiner-monitor/config.json"}
 {"level":"INFO","msg":"running as LaunchDaemon with root privileges"}
-{"level":"INFO","msg":"starting monitoring loop","process":"karabiner_grabber","threshold_mb":50}
-{"level":"INFO","msg":"process found","pid":99849,"name":"karabiner_grabber"}
+{"level":"INFO","msg":"starting monitoring loop","process":"Karabiner-Core-Service","threshold_mb":50}
+{"level":"INFO","msg":"process found","pid":99849,"name":"Karabiner-Core-Service"}
 {"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":797.5,"threshold_mb":50}
 ```
 
@@ -90,7 +90,7 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 
 ```json
 {
-  "process_name": "karabiner_grabber",
+  "process_name": "Karabiner-Core-Service",
   "memory_threshold_mb": 50,
   "check_interval_seconds": 60,
   "idle_wait_seconds": 10,
@@ -101,7 +101,7 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 
 ### 設定項目
 
-- **process_name**: 監視するプロセス名（デフォルト: `karabiner_grabber`）
+- **process_name**: 監視するプロセス名（デフォルト: `Karabiner-Core-Service`）
 - **memory_threshold_mb**: メモリ使用量の閾値（MB）（デフォルト: 50）
 - **check_interval_seconds**: メモリチェック間隔（秒）（デフォルト: 60）
 - **idle_wait_seconds**: killする前の待機時間（秒）（デフォルト: 10）
@@ -133,7 +133,7 @@ sudo tail -f /var/log/karabiner-monitor/monitor.log
 次のようなログエントリが表示されます:
 ```
 {"level":"INFO","msg":"config file changed, reloading","event":"WRITE"}
-{"level":"INFO","msg":"config reloaded successfully","process":"karabiner_grabber","threshold_mb":100,...}
+{"level":"INFO","msg":"config reloaded successfully","process":"Karabiner-Core-Service","threshold_mb":100,...}
 ```
 
 **注意事項:**
@@ -263,11 +263,11 @@ karabiner-monitor/
 
 #### rootプロセスとしての実行
 
-`karabiner_grabber`はrootプロセスとして実行されており、通常のユーザープロセスからはアクセスできません。gopsutilライブラリでrootプロセスの情報を取得しようとすると"invalid argument"エラーが発生します。
+`Karabiner-Core-Service`はrootプロセスとして実行されており、通常のユーザープロセスからはアクセスできません。gopsutilライブラリでrootプロセスの情報を取得しようとすると"invalid argument"エラーが発生します。
 
 この問題を解決するため、karabiner-monitorはLaunchDaemonとしてroot権限で実行されます:
 
-1. **プロセス監視**: rootとして実行されるため、rootプロセス(karabiner_grabber)の情報を取得可能
+1. **プロセス監視**: rootとして実行されるため、rootプロセス(Karabiner-Core-Service)の情報を取得可能
 2. **メモリ計測**: vmmapコマンドを使用してphys_footprintを正確に取得
 3. **待機時間**: プロセスをkillする前に設定された秒数だけ待機
 
@@ -278,7 +278,7 @@ FindProcess関数は2段階で検索を行います:
 1. **完全一致検索**: プロセス名が完全に一致するかチェック
 2. **コマンドライン検索**: コマンドライン引数に指定文字列が含まれるかチェック
 
-これにより、`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`のようなフルパスで実行されているプロセスも検出できます。
+これにより、`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/Karabiner-Core-Service`のようなフルパスで実行されているプロセスも検出できます。
 
 #### 通知システム
 
@@ -313,7 +313,7 @@ macOSでは`phys_footprint`を使用してメモリ使用量を計測します�
 **RSSとの比較**:
 - RSS: 物理メモリに常駐しているページのサイズ（共有メモリを含む）
 - phys_footprint: プロセスが実際に使用している物理メモリ（共有メモリの正確な割り当てを考慮）
-- 例: `karabiner_grabber`の場合、RSSは約13MBだが、phys_footprintは約797MB
+- 例: `Karabiner-Core-Service`の場合、RSSは約13MBだが、phys_footprintは約797MB
 
 **制限事項**:
 - `vmmap`コマンドの実行には約2秒かかる場合があります
@@ -339,9 +339,9 @@ MIT License
 
 以下の原因が考えられます:
 
-1. **karabiner_grabberが実行されていない**: プロセスが起動すると自動的に監視が開始されます
+1. **Karabiner-Core-Serviceが実行されていない**: プロセスが起動すると自動的に監視が開始されます
    ```bash
-   ps aux | grep karabiner_grabber | grep -v grep
+   ps aux | grep Karabiner-Core-Service | grep -v grep
    ```
 
 2. **LaunchDaemonが正しく起動していない**: サービスの状態を確認してください
@@ -409,10 +409,10 @@ terminal-notifierがインストールされていない場合、osascriptにフ
    sudo tail -f /var/log/karabiner-monitor/monitor.log | grep "killed"
    ```
 
-4. **karabiner_grabberのPID変化を確認**:
+4. **Karabiner-Core-ServiceのPID変化を確認**:
    ```bash
    # 再起動前のPIDを記録
-   ps aux | grep karabiner_grabber | grep -v grep
+   ps aux | grep Karabiner-Core-Service | grep -v grep
 
    # しばらく待ってから再度確認
    # PIDが変わっていれば再起動された
