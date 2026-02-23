@@ -1,6 +1,6 @@
 # Karabiner Monitor
 
-A memory monitoring and auto-restart tool for the Karabiner-Core-Service process on macOS
+A memory monitoring and auto-restart tool for the Karabiner-Elements (Karabiner-Core-Service) process on macOS
 
 [日本語版 README](README.ja.md)
 

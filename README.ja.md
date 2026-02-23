@@ -1,6 +1,6 @@
 # Karabiner Monitor
 
-macOS用のKarabiner-Core-Serviceプロセスのメモリ監視・自動再起動ツール
+macOS用のKarabiner-Elements（Karabiner-Core-Service）プロセスのメモリ監視・自動再起動ツール
 
 ## 概要
 
