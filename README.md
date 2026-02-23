@@ -1,16 +1,16 @@
 # Karabiner Monitor
 
-A memory monitoring and auto-restart tool for the karabiner_grabber process on macOS
+A memory monitoring and auto-restart tool for the Karabiner-Elements (Karabiner-Core-Service) process on macOS
 
 [日本語版 README](README.ja.md)
 
 ## Overview
 
-The `karabiner_grabber` process in Karabiner-Elements can increase memory usage after events like screen sleep, causing keyboard shortcuts to stop working. This tool monitors memory usage and automatically restarts the process when it exceeds a threshold.
+The `Karabiner-Core-Service` process in Karabiner-Elements can increase memory usage after events like screen sleep, causing keyboard shortcuts to stop working. This tool monitors memory usage and automatically restarts the process when it exceeds a threshold.
 
 ## Features
 
-- **Memory Monitoring**: Check `karabiner_grabber` process memory usage at configurable intervals
+- **Memory Monitoring**: Check `Karabiner-Core-Service` process memory usage at configurable intervals
 - **Auto Restart**: Automatically kill the process when memory threshold is exceeded (Karabiner restarts it automatically)
 - **Wait Period**: Configurable wait time before killing the process (default 10 seconds)
 - **macOS Notifications**: Uses terminal-notifier (recommended) with osascript fallback
@@ -23,7 +23,8 @@ The `karabiner_grabber` process in Karabiner-Elements can increase memory usage 
 
 - macOS 12 or later
 - Go 1.21 or later (for building)
-- Karabiner-Elements
+- Karabiner-Elements 15.7.0 or later
+  - `Karabiner-Core-Service` was introduced in 15.7.0, replacing `karabiner_grabber`
 - terminal-notifier (optional, recommended for notifications)
 
 **Note**: This tool runs as a LaunchDaemon with root privileges, so no additional permission settings are required.
@@ -65,7 +66,7 @@ Once installed, the service starts as a LaunchDaemon.
 
 **Important specifications**:
 - This service runs as a LaunchDaemon with root privileges
-- Root privileges are required because `karabiner_grabber` runs as a root process
+- Root privileges are required because `Karabiner-Core-Service` runs as a root process
 - No additional permission settings are required as it runs as root
 - Waits for the configured number of seconds (default 10) before killing the process
 - Uses `terminal-notifier` for notifications (if installed), falls back to `osascript`
@@ -81,8 +82,8 @@ When operating normally, you should see logs like:
 ```
 {"level":"INFO","msg":"karabiner-monitor starting","config":"/Library/Application Support/karabiner-monitor/config.json"}
 {"level":"INFO","msg":"running as LaunchDaemon with root privileges"}
-{"level":"INFO","msg":"starting monitoring loop","process":"karabiner_grabber","threshold_mb":50}
-{"level":"INFO","msg":"process found","pid":99849,"name":"karabiner_grabber"}
+{"level":"INFO","msg":"starting monitoring loop","process":"Karabiner-Core-Service","threshold_mb":50}
+{"level":"INFO","msg":"process found","pid":99849,"name":"Karabiner-Core-Service"}
 {"level":"INFO","msg":"memory usage","pid":99849,"memory_mb":797.5,"threshold_mb":50}
 ```
 
@@ -92,7 +93,7 @@ Configuration file: `/Library/Application Support/karabiner-monitor/config.json`
 
 ```json
 {
-  "process_name": "karabiner_grabber",
+  "process_name": "Karabiner-Core-Service",
   "memory_threshold_mb": 50,
   "check_interval_seconds": 60,
   "idle_wait_seconds": 10,
@@ -103,7 +104,7 @@ Configuration file: `/Library/Application Support/karabiner-monitor/config.json`
 
 ### Configuration Options
 
-- **process_name**: Process name to monitor (default: `karabiner_grabber`)
+- **process_name**: Process name to monitor (default: `Karabiner-Core-Service`)
 - **memory_threshold_mb**: Memory usage threshold in MB (default: 50)
 - **check_interval_seconds**: Memory check interval in seconds (default: 60)
 - **idle_wait_seconds**: Wait time before killing process in seconds (default: 10)
@@ -135,7 +136,7 @@ The configuration file is automatically monitored for changes. When you modify a
 You should see log entries like:
 ```
 {"level":"INFO","msg":"config file changed, reloading","event":"WRITE"}
-{"level":"INFO","msg":"config reloaded successfully","process":"karabiner_grabber","threshold_mb":100,...}
+{"level":"INFO","msg":"config reloaded successfully","process":"Karabiner-Core-Service","threshold_mb":100,...}
 ```
 
 **Notes:**
@@ -265,11 +266,11 @@ karabiner-monitor/
 
 #### Running as Root Process
 
-`karabiner_grabber` runs as a root process and cannot be accessed from regular user processes. Attempting to get root process information with the gopsutil library results in an "invalid argument" error.
+`Karabiner-Core-Service` runs as a root process and cannot be accessed from regular user processes. Attempting to get root process information with the gopsutil library results in an "invalid argument" error.
 
 To solve this problem, karabiner-monitor runs as a LaunchDaemon with root privileges:
 
-1. **Process Monitoring**: Can access root process (karabiner_grabber) information by running as root
+1. **Process Monitoring**: Can access root process (Karabiner-Core-Service) information by running as root
 2. **Memory Measurement**: Uses vmmap command to accurately get phys_footprint
 3. **Wait Time**: Waits the configured number of seconds before killing the process
 
@@ -280,7 +281,7 @@ The FindProcess function searches in two stages:
 1. **Exact Match**: Check if the process name matches exactly
 2. **Command Line Search**: Check if the search string is contained in command line arguments
 
-This allows detection of processes running with full paths like `/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_grabber`.
+This allows detection of processes running with full paths like `/Library/Application Support/org.pqrs/Karabiner-Elements/bin/Karabiner-Core-Service`.
 
 #### Notification System
 
@@ -315,7 +316,7 @@ On macOS, `phys_footprint` is used to measure memory usage. This is the same val
 **Comparison with RSS**:
 - RSS: Size of pages resident in physical memory (includes shared memory)
 - phys_footprint: Physical memory actually used by the process (considers accurate allocation of shared memory)
-- Example: For `karabiner_grabber`, RSS is about 13MB but phys_footprint is about 797MB
+- Example: For `Karabiner-Core-Service`, RSS is about 13MB but phys_footprint is about 797MB
 
 **Limitations**:
 - `vmmap` command execution can take about 2 seconds
@@ -341,9 +342,9 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 Possible causes:
 
-1. **karabiner_grabber is not running**: Monitoring starts automatically when the process launches
+1. **Karabiner-Core-Service is not running**: Monitoring starts automatically when the process launches
    ```bash
-   ps aux | grep karabiner_grabber | grep -v grep
+   ps aux | grep Karabiner-Core-Service | grep -v grep
    ```
 
 2. **LaunchDaemon not started correctly**: Check service status
@@ -411,10 +412,10 @@ If terminal-notifier is not installed, it falls back to osascript, but notificat
    sudo tail -f /var/log/karabiner-monitor/monitor.log | grep "killed"
    ```
 
-4. **Check karabiner_grabber PID changes**:
+4. **Check Karabiner-Core-Service PID changes**:
    ```bash
    # Record PID before restart
-   ps aux | grep karabiner_grabber | grep -v grep
+   ps aux | grep Karabiner-Core-Service | grep -v grep
 
    # Check again after a while
    # If PID changed, process was restarted

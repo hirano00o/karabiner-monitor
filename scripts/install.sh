@@ -32,7 +32,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "Creating default configuration..."
     sudo tee "$CONFIG_FILE" > /dev/null << 'EOF'
 {
-  "process_name": "karabiner_grabber",
+  "process_name": "Karabiner-Core-Service",
   "memory_threshold_mb": 50,
   "check_interval_seconds": 60,
   "idle_wait_seconds": 10,
@@ -79,7 +79,7 @@ echo ""
 echo "📝 Service Information"
 echo ""
 echo "This service runs as a LaunchDaemon with root privileges, which allows it to:"
-echo "  • Monitor the karabiner_grabber process (which also runs as root)"
+echo "  • Monitor the Karabiner-Core-Service process (which also runs as root)"
 echo "  • Access accurate memory usage via phys_footprint"
 echo "  • Kill and restart the process when memory threshold is exceeded"
 echo ""

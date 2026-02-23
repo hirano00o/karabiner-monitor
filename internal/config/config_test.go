@@ -61,8 +61,8 @@ func TestLoad(t *testing.T) {
 		}
 
 		// Check default values
-		if cfg.ProcessName != "karabiner_grabber" {
-			t.Errorf("ProcessName = %v, want karabiner_grabber", cfg.ProcessName)
+		if cfg.ProcessName != "Karabiner-Core-Service" {
+			t.Errorf("ProcessName = %v, want Karabiner-Core-Service", cfg.ProcessName)
 		}
 		if cfg.MemoryThresholdMB != 50 {
 			t.Errorf("MemoryThresholdMB = %v, want 50", cfg.MemoryThresholdMB)

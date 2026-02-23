@@ -24,8 +24,8 @@ func TestNewManager(t *testing.T) {
 	}
 
 	cfg := manager.Get()
-	if cfg.ProcessName != "karabiner_grabber" {
-		t.Errorf("expected default process name 'karabiner_grabber', got %s", cfg.ProcessName)
+	if cfg.ProcessName != "Karabiner-Core-Service" {
+		t.Errorf("expected default process name 'Karabiner-Core-Service', got %s", cfg.ProcessName)
 	}
 
 	// Test: NewManager loads existing config
@@ -191,7 +191,7 @@ func TestManager_ConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 
 			newConfig := &Config{
-				ProcessName:          "karabiner_grabber",
+				ProcessName:          "Karabiner-Core-Service",
 				MemoryThresholdMB:    50 + id,
 				CheckIntervalSeconds: 60,
 				IdleWaitSeconds:      10,

@@ -14,7 +14,7 @@ import (
 //
 //	info := &ProcessInfo{
 //		PID:  12345,
-//		Name: "karabiner_grabber",
+//		Name: "Karabiner-Core-Service",
 //	}
 type ProcessInfo struct {
 	// PID is the process ID
@@ -26,8 +26,8 @@ type ProcessInfo struct {
 
 // FindProcess finds a process by name and returns its information.
 // It searches in two ways:
-//  1. Exact match with process name (e.g., "karabiner_grabber")
-//  2. Partial match in command line arguments (e.g., "/Library/.../karabiner_grabber")
+//  1. Exact match with process name (e.g., "Karabiner-Core-Service")
+//  2. Partial match in command line arguments (e.g., "/Library/.../Karabiner-Core-Service")
 //
 // If multiple processes match, it returns the first one found.
 // Returns an error if the process is not found or if there's an error accessing process information.
@@ -35,7 +35,7 @@ type ProcessInfo struct {
 // Example:
 //
 //	// Find by exact process name
-//	proc, err := FindProcess("karabiner_grabber")
+//	proc, err := FindProcess("Karabiner-Core-Service")
 //	if err != nil {
 //		log.Printf("process not found: %v", err)
 //		return
@@ -43,7 +43,7 @@ type ProcessInfo struct {
 //	fmt.Printf("Found process: PID=%d, Name=%s\n", proc.PID, proc.Name)
 //
 //	// Find by path substring (useful when process runs with full path)
-//	proc2, err := FindProcess("Karabiner-Elements/bin/karabiner_grabber")
+//	proc2, err := FindProcess("Karabiner-Elements/bin/Karabiner-Core-Service")
 func FindProcess(name string) (*ProcessInfo, error) {
 	processes, err := process.Processes()
 	if err != nil {

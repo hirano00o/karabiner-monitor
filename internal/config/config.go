@@ -14,7 +14,7 @@ import (
 // Example:
 //
 //	cfg := &Config{
-//		ProcessName:          "karabiner_grabber",
+//		ProcessName:          "Karabiner-Core-Service",
 //		MemoryThresholdMB:    50,
 //		CheckIntervalSeconds: 60,
 //		IdleWaitSeconds:      10,
@@ -49,7 +49,7 @@ type Config struct {
 // Default returns a Config with default values.
 //
 // Default values are:
-//   - ProcessName: "karabiner_grabber"
+//   - ProcessName: "Karabiner-Core-Service"
 //   - MemoryThresholdMB: 50
 //   - CheckIntervalSeconds: 60
 //   - IdleWaitSeconds: 10
@@ -61,10 +61,10 @@ type Config struct {
 //
 //	cfg := Default()
 //	fmt.Printf("Default process: %s\n", cfg.ProcessName)
-//	// Output: Default process: karabiner_grabber
+//	// Output: Default process: Karabiner-Core-Service
 func Default() *Config {
 	return &Config{
-		ProcessName:          "karabiner_grabber",
+		ProcessName:          "Karabiner-Core-Service",
 		MemoryThresholdMB:    50,
 		CheckIntervalSeconds: 60,
 		IdleWaitSeconds:      10,
